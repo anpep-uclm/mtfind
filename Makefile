@@ -1,4 +1,4 @@
-CXXFLAGS += -Iinclude -pthread -std=c++17
+CXXFLAGS += -Iinclude -pthread -std=c++17 -Wall -Wextra -Wpedantic
 
 all: mtfind
 
