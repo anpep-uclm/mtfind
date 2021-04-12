@@ -1,15 +1,27 @@
-#include <atomic>
+// mtfind(1) -- Half-assed multithread grep clone
+// Copyright (c) 2021 Ángel Pérez <angel@ttm.sh>
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 #include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iostream>
-#include <mutex>
-#include <thread>
-#include <utility>
-#include <vector>
 
-#include <Shared/Thread.h>
+#include <MTFind/SearchState.h>
 #include <MTFind/SearchThread.h>
 
 #define PROGRAM_NAME "mtfind"
@@ -44,6 +56,7 @@ static Arguments parse_args(int argc, const char *const argv[])
 
     args.file_path = argv[1];
     args.needle = argv[2];
+    dbg("args\n\tthread_count=", args.thread_count, "\n\tfile_path=", args.file_path, "\n\tneedle=", args.needle);
 
     if (args.needle.empty())
         std::cerr << PROGRAM_NAME ": error: nothing to look for in the haystack!" << std::endl;
@@ -54,19 +67,32 @@ static Arguments parse_args(int argc, const char *const argv[])
 int main(int argc, char *argv[])
 {
     const auto &args = parse_args(argc, argv);
-    std::vector<Thread *> threads;
+    std::vector<std::unique_ptr<Thread>> threads;
 
+    SearchState search_state;
     for (size_t i = 0; i < args.thread_count; i++) {
-        auto thread = new SearchThread { args.file_path, args.needle, args.thread_count };
-        threads.push_back(thread);
+        threads.push_back(std::make_unique<SearchThread>(args.file_path, args.needle, args.thread_count, search_state));
     }
 
-    for (const auto thread : threads) {
+    for (const auto &thread : threads) {
         thread->start();
     }
 
-    for (const auto thread : threads) {
+    for (const auto &thread : threads) {
         thread->join();
+    }
+
+    for (size_t i = 0, line_off = 0;
+         i < args.thread_count;
+         line_off += search_state.line_offsets[i], i++) {
+        for (const auto &result : search_state.results[i]) {
+            printf("[Hilo %u inicio: %ld - final: %ld] :: línea %zu :: ... %s ...\n",
+                result.thread_id,
+                1 + result.start_idx,
+                1 + result.end_idx,
+                2 + result.line + line_off,
+                result.snippet.c_str());
+        }
     }
 
     return 0;
