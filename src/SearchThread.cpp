@@ -61,16 +61,17 @@ static std::string previous_word(const std::string &str, off_t start)
 
 static std::string next_word(const std::string &str, off_t start, size_t needle_len)
 {
-    if (start < str.size()) {
+    if (start < static_cast<off_t>(str.size())) {
         // skip space characters
         off_t next_word_start = start + static_cast<off_t>(needle_len);
-        while (next_word_start < str.size() && !isalnum((uint8_t)str[next_word_start++]))
+        while (next_word_start < static_cast<off_t>(str.size())
+            && !isalnum((uint8_t)str[next_word_start++]))
             ;
 
         // obtain printable ASCII characters
         next_word_start--;
         off_t next_word_end = next_word_start;
-        while (next_word_end < str.size()) {
+        while (next_word_end < static_cast<off_t>(str.size())) {
             const auto c = static_cast<uint8_t>(str[next_word_end]);
             if (!isalnum(c) || isspace(c))
                 break;
@@ -109,7 +110,7 @@ void SearchThread::run()
     size_t line_idx = 0;
     for (std::string line; std::getline(m_stream, line) && m_stream.tellg() < chunk_end; line_idx++) {
         off_t needle_idx = -1; // index where the needle was found
-        while ((needle_idx = static_cast<off_t>(line.find(m_needle, static_cast<size_t>(needle_idx) + 1))) != std::string::npos) {
+        while ((needle_idx = static_cast<off_t>(line.find(m_needle, static_cast<size_t>(needle_idx) + 1))) != static_cast<off_t>(std::string::npos)) {
             const auto last_character = static_cast<uint8_t>(line[needle_idx + m_needle.size()]);
             if (isalnum(last_character)) {
                 // ignore this occurrence if whatever character immediately after the needle is alphanumeric

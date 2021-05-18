@@ -21,7 +21,7 @@
 
 #include <Shared/Thread.h>
 
-std::atomic<size_t> Thread::s_thread_count { 0 };
+std::atomic<ThreadID> Thread::s_thread_count { 0 };
 
 Thread::Thread(std::function<void()> f)
     : m_fn { std::move(f) }
